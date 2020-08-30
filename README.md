@@ -13,7 +13,7 @@ mixed (depth 10) matrix is created for normalization procedures.
 0. Requires GRSISort 4.X.X
 1. Get the code, either via tarball or from github
 ```
-git clone https://github.com/cnatzke/MakeGammaGammaHistograms.git
+https://github.com/cnatzke-TRIUMF/GammaGammaDistribution.git
 ```
 2. Build program using standard cmake process, e.g.
 ```
