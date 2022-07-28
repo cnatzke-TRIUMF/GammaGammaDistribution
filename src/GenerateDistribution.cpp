@@ -24,48 +24,54 @@
 #include "HistogramManager.h"
 #include "FitManager.h"
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 
-	if (argc == 1) { // no inputs given
+	if (argc == 1)
+	{ // no inputs given
 		PrintUsage(argv);
 		return 0;
 	}
-	else if (argc > 2) {
+	else if (argc > 2)
+	{
 		std::cerr << "Too many arguments given: "
-		          << argc << " given, 1 required.\n" << std::endl;
+				  << argc << " given, 1 required.\n"
+				  << std::endl;
 		PrintUsage(argv);
 		return 0;
 	}
-
 
 	HistogramManager *hist_man = new HistogramManager();
 	FitManager fit_man;
 	int file_type = 0;
 	TList *time_random_hist_list;
 	TList *event_mixed_hist_list;
-	std::vector<TH1D*> time_random_projection_vec;
-	std::vector<TH1D*> time_random_clone_vec;
-	std::vector<TH1D*> event_mixed_projection_vec;
-	std::vector<TH1D*> event_mixed_clone_vec;
+	std::vector<TH1D *> time_random_projection_vec;
+	std::vector<TH1D *> time_random_clone_vec;
+	std::vector<TH1D *> event_mixed_projection_vec;
+	std::vector<TH1D *> event_mixed_clone_vec;
 
 	InitializeGRSIEnv();
 	file_type = AutoFileDetect(argv[1]);
 	// use for multiple input files
-	//for (auto i = 1; i < argc; i++) AutoFileDetect(argv[i]);
+	// for (auto i = 1; i < argc; i++) AutoFileDetect(argv[i]);
 
-	if (file_type == 1) {
+	if (file_type == 1)
+	{
 		time_random_hist_list = hist_man->LoadHistograms(argv[1], "TimeRandomSubtacted");
 		event_mixed_hist_list = hist_man->LoadHistograms(argv[1], "EventMixed");
-	} else {
+	}
+	else
+	{
 		return 1;
 	}
 
 	float gate_low = 500;
 	float gate_high = 600;
-   float peak_of_interest = 1770;
+	float peak_of_interest = 1770;
 	float fit_low = peak_of_interest - 10;
 	float fit_high = peak_of_interest + 10;
-	
+
 	time_random_projection_vec = fit_man.GenerateProjections(time_random_hist_list, gate_low, gate_high, fit_low, fit_high);
 	event_mixed_projection_vec = fit_man.GenerateProjections(event_mixed_hist_list, gate_low, gate_high, fit_low, fit_high);
 
@@ -82,7 +88,8 @@ int main(int argc, char **argv) {
  *
  * @param fileName  Name of input file
  *****************************************************************************/
-int PlotDistribution(std::vector<TH1D*> correlatedHists, std::vector<TH1D*> eventMixedHists, float fitLow, float fitHigh){
+int PlotDistribution(std::vector<TH1D *> correlatedHists, std::vector<TH1D *> eventMixedHists, float fitLow, float fitHigh)
+{
 	FitManager fit_man;
 	double chi2;
 	double chi2_uncorr;
@@ -99,46 +106,61 @@ int PlotDistribution(std::vector<TH1D*> correlatedHists, std::vector<TH1D*> even
 	fits_file << "Angle Index, Angle, Corr Area, Corr Area Errror, Uncorr Area, Uncorr Area Error" << std::endl;
 
 	TFile out_file("ProjectedHistograms.root", "RECREATE");
-	for (unsigned int i = 0; i < correlatedHists.size(); i++) {
+	for (unsigned int i = 0; i < correlatedHists.size(); i++)
+	{
 		fitted_peak = fit_man.FitPeak(correlatedHists.at(i), fitLow + 10, fitLow, fitHigh);
 		fitted_peak_uncorr = fit_man.FitPeak(eventMixedHists.at(i), fitLow + 10, fitLow, fitHigh);
 
-		if (i == 0) {
+		if (i == 0)
+		{
 			correlatedHists.at(i)->Write("total_proj");
 			eventMixedHists.at(i)->Write("total_proj_uncorr");
-		} else {
+		}
+		else
+		{
 			correlatedHists.at(i)->Write(Form("corr_%i", i));
 			eventMixedHists.at(i)->Write(Form("uncorr_%i", i));
 		}
 
 		// writing areas to file
-		if (i ==0 ) {
+		if (i == 0)
+		{
 			fits_file << "total, "
-			          << fitted_peak->Area() << ", " << fitted_peak->AreaErr() << ", "
-			          << fitted_peak_uncorr->Area() << ", " << fitted_peak_uncorr->AreaErr()
-			          << std::endl;
-		} else {
+					  << fitted_peak->Area() << ", " << fitted_peak->AreaErr() << ", "
+					  << fitted_peak_uncorr->Area() << ", " << fitted_peak_uncorr->AreaErr()
+					  << std::endl;
+		}
+		else
+		{
 			fits_file << i << ", "
-                   << fAngleCombinations.at(i - 1) << ", "
-			          << fitted_peak->Area() << ", " << fitted_peak->AreaErr() << ", "
-			          << fitted_peak_uncorr->Area() << ", " << fitted_peak_uncorr->AreaErr()
-			          << std::endl;
+					  << fAngleCombinations.at(i - 1) << ", "
+					  << fitted_peak->Area() << ", " << fitted_peak->AreaErr() << ", "
+					  << fitted_peak_uncorr->Area() << ", " << fitted_peak_uncorr->AreaErr()
+					  << std::endl;
 		}
 
 		chi2 = fitted_peak->GetChi2() / fitted_peak->GetNDF();
 		chi2_uncorr = fitted_peak_uncorr->GetChi2() / fitted_peak_uncorr->GetNDF();
-		if (chi2 > 10) {
-			if (i ==0 ) {
+		if (chi2 > 10)
+		{
+			if (i == 0)
+			{
 				bad_fits_file << "Total projection" << std::endl;
-			} else {
+			}
+			else
+			{
 				bad_fits_file << i << " corr " << std::endl;
 			}
 		}
 
-		if (chi2_uncorr > 10) {
-			if (i ==0 ) {
+		if (chi2_uncorr > 10)
+		{
+			if (i == 0)
+			{
 				bad_fits_file << "Total projection uncorr" << std::endl;
-			} else {
+			}
+			else
+			{
 				bad_fits_file << i << " uncorr " << std::endl;
 			}
 		}
@@ -149,7 +171,6 @@ int PlotDistribution(std::vector<TH1D*> correlatedHists, std::vector<TH1D*> even
 
 		gg_uncorr->SetPoint(i, i, fitted_peak_uncorr->Area());
 		gg_uncorr->SetPointError(i, 0., fitted_peak_uncorr->AreaErr());
-
 	}
 	gg_corr->Write("gg_corr");
 	gg_uncorr->Write("gg_uncorr");
@@ -166,47 +187,51 @@ int PlotDistribution(std::vector<TH1D*> correlatedHists, std::vector<TH1D*> even
  *
  * @param fileName  Name of input file
  *****************************************************************************/
-int AutoFileDetect(std::string fileName){
+int AutoFileDetect(std::string fileName)
+{
 	size_t dot_pos = fileName.find_last_of('.');
 	std::string ext = fileName.substr(dot_pos + 1);
 
-	if (ext == "root") {
-		//OpenRootFile(fileName);
+	if (ext == "root")
+	{
+		// OpenRootFile(fileName);
 		return 1;
-	} else {
+	}
+	else
+	{
 		std::cerr << "Discarding unknown file: " << fileName.c_str() << std::endl;
 		return 0;
 	}
 } // End AutoFileDetect
 
-/************************************************************//**
- * Opens Root files
- *
- * @param fileName  Name of ROOT file
- ***************************************************************/
+/************************************************************/ /**
+																* Opens Root files
+																*
+																* @param fileName  Name of ROOT file
+																***************************************************************/
 /*
    void OpenRootFile(std::string fileName){
    TFile* in_file = new TFile(fileName.c_str());
    if (in_file->IsOpen()) {
-       std::cout << "Opened ROOT file: " << in_file->GetName() << std::endl;
-       HistogramManager* hist_man = new HistogramManager();
-       TList *trsub_hist_list = hist_man->LoadHistograms(in_file, "TimeRandomSubtacted");
+	   std::cout << "Opened ROOT file: " << in_file->GetName() << std::endl;
+	   HistogramManager* hist_man = new HistogramManager();
+	   TList *trsub_hist_list = hist_man->LoadHistograms(in_file, "TimeRandomSubtacted");
 
-       TH2D* test_hist = (TH2D*)trsub_hist_list->FindObject("gammaGammaSub30");
-       TCanvas *c1 = new TCanvas("c1","c1",800,650);
-       c1->cd();
-       test_hist->Draw("colz");
-       c1->SetLogz();
-       c1->Update();
-       c1->Print("test.png");
-       //std::cout << "Press any key to continue ..." << std::endl;
-       //std::cin.get();
+	   TH2D* test_hist = (TH2D*)trsub_hist_list->FindObject("gammaGammaSub30");
+	   TCanvas *c1 = new TCanvas("c1","c1",800,650);
+	   c1->cd();
+	   test_hist->Draw("colz");
+	   c1->SetLogz();
+	   c1->Update();
+	   c1->Print("test.png");
+	   //std::cout << "Press any key to continue ..." << std::endl;
+	   //std::cin.get();
 
-       // cleaning up
-       delete trsub_hist_list;
-       delete hist_man;
+	   // cleaning up
+	   delete trsub_hist_list;
+	   delete hist_man;
    } else {
-       std::cerr << "Could not open ROOT file: " << in_file->GetName() << std::endl;
+	   std::cerr << "Could not open ROOT file: " << in_file->GetName() << std::endl;
    }
    } // end OpenRootFile
  */
@@ -214,25 +239,27 @@ int AutoFileDetect(std::string fileName){
 /******************************************************************************
  * Initializes GRSISort environment
  *****************************************************************************/
-void InitializeGRSIEnv(){
+void InitializeGRSIEnv()
+{
 	std::string grsi_path = getenv("GRSISYS");
-	if(grsi_path.length() > 0) {
+	if (grsi_path.length() > 0)
+	{
 		grsi_path += "/";
 	}
 	grsi_path += ".grsirc";
 	gEnv->ReadFile(grsi_path.c_str(), kEnvChange);
 
 	// suppressed warnings, need to test if actyally needed
-	//TParserLibrary::Get()->Load();
+	// TParserLibrary::Get()->Load();
 } // InitializeGRSIEnv
 
 /******************************************************************************
  * Prints usage message and version
  *****************************************************************************/
-void PrintUsage(char* argv[]){
-	std::cerr << argv[0] << " Version: " << GenerateDistribution_VERSION_MAJOR
-	          << "." << GenerateDistribution_VERSION_MINOR << "\n"
-	          << "usage: " << argv[0] << " histogram_file\n"
-	          << " histogram_file:     File containing gamma-gamma angular matrices (must end with .root)"
-	          << std::endl;
+void PrintUsage(char *argv[])
+{
+	std::cerr << argv[0] << "\n"
+			  << "usage: " << argv[0] << " histogram_file\n"
+			  << " histogram_file:     File containing gamma-gamma angular matrices (must end with .root)"
+			  << std::endl;
 } // end PrintUsage
