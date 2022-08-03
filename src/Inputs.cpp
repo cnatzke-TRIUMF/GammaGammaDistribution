@@ -6,6 +6,8 @@
 #include "libconfig.h++"
 
 #include "Inputs.h"
+#include "TDirectory.h"
+#include "TKey.h"
 
 /* -------------------------------------------
     Constructor
@@ -25,6 +27,15 @@ Inputs::Inputs() : fVerbose(0)
 ------------------------------------------- */
 Inputs::~Inputs()
 {
+}
+
+/* -------------------------------------------
+    Reads in and manages input files
+------------------------------------------- */
+void Inputs::ReadInputFiles(const std::string &hist_file, const std::string &config_file)
+{
+    ReadConfigFile(config_file);
+    ReadInHistograms(hist_file);
 }
 
 /* -------------------------------------------
@@ -73,7 +84,7 @@ void Inputs::ReadConfigFile(const std::string &filename)
     {
         if (fVerbose > 0)
         {
-            std::cout << "\tPROJECTION GATES" << std::endl;
+            std::cout << "---> PROJECTION GATES" << std::endl;
             std::cout << std::setw(20) << std::left << "GATE_LOW"
                       << "  "
                       << std::setw(20) << std::left << "GATE_HIGH"
@@ -110,7 +121,7 @@ void Inputs::ReadConfigFile(const std::string &filename)
     {
         if (fVerbose > 0)
         {
-            std::cout << "\tFITTING GATES" << std::endl;
+            std::cout << "---> FITTING GATES" << std::endl;
             std::cout << std::setw(20) << std::left << "CENTROID"
                       << "  "
                       << std::setw(20) << std::left << "LOWER_BOUND"
@@ -158,4 +169,51 @@ std::vector<int> Inputs::ProjectionBgGates()
     v.push_back(fBgGateHigh);
 
     return v;
+}
+
+/*********************************************
+ * Read histograms into list
+ *
+ * @param filename ROOT file containing histogram
+ *********************************************/
+void Inputs::ReadInHistograms(const std::string &filename)
+{
+    TFile *file = new TFile(filename.c_str());
+
+    if (file->IsOpen())
+    {
+        std::cout << "Found ROOT file: " << file->GetName() << std::endl;
+        ExtractHistograms(file);
+    }
+    else
+    {
+        std::cerr << "Could not open ROOT file: " << file->GetName() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*********************************************
+ * Reads histograms into vector
+ *
+ * @param filename ROOT file containing histogram
+ *********************************************/
+void Inputs::ExtractHistograms(TFile *file)
+{
+    std::vector<std::string> dir_names = {"time-random-subtracted", "event-mixed"};
+    TH2D *obj;
+    TKey *key;
+
+    for (auto const &dir_iter : dir_names)
+    {
+        std::cout << "Retrieving " << dir_iter << " histograms" << std::endl;
+        TDirectory *dir = dynamic_cast<TDirectory *>(file->Get(dir_iter.c_str()));
+        TIter next(dir->GetListOfKeys());
+        while ((key = (TKey *)next()))
+        {
+            obj = dynamic_cast<TH2D *>(dir->Get(key->GetName())); // copy object to memory
+            fHistogramVector.push_back(obj);
+            if (fVerbose > 0)
+                std::cout << " found object: " << key->GetName() << std::endl;
+        }
+    }
 }

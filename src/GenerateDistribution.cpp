@@ -44,8 +44,10 @@ int main(int argc, char **argv)
 
 	Inputs inputs;
 
+	InitializeGRSIEnv();
+
 	// inputs.SetVerbose(1);
-	inputs.ReadConfigFile(fConfigFile);
+	inputs.ReadInputFiles(fHistFile, fConfigFile);
 
 	/*
 
@@ -59,7 +61,6 @@ int main(int argc, char **argv)
 	std::vector<TH1D *> event_mixed_projection_vec;
 	std::vector<TH1D *> event_mixed_clone_vec;
 
-	InitializeGRSIEnv();
 	file_type = AutoFileDetect(argv[1]);
 	// use for multiple input files
 	// for (auto i = 1; i < argc; i++) AutoFileDetect(argv[i]);
