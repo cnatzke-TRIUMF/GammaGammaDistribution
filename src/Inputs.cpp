@@ -2,14 +2,15 @@
 #include <fstream>
 #include <cstdlib>
 #include <iomanip>
+#include <stdlib.h>
 #include "libconfig.h++"
 
-#include "InputManager.h"
+#include "Inputs.h"
 
 /* -------------------------------------------
     Constructor
 ------------------------------------------- */
-InputManager::InputManager() : fVerbose(0)
+Inputs::Inputs() : fVerbose(0)
 {
     int init_value = -1;
     fElement = fIsotope = init_value;
@@ -22,14 +23,14 @@ InputManager::InputManager() : fVerbose(0)
 /* -------------------------------------------
     Destructor
 ------------------------------------------- */
-InputManager::~InputManager()
+Inputs::~Inputs()
 {
 }
 
 /* -------------------------------------------
     Reads in and parses config file
 ------------------------------------------- */
-int InputManager::ReadConfigFile(const std::string &filename)
+void Inputs::ReadConfigFile(const std::string &filename)
 {
     fInputFileName = filename;
 
@@ -42,12 +43,12 @@ int InputManager::ReadConfigFile(const std::string &filename)
     catch (const libconfig::FileIOException &fioex)
     {
         std::cerr << "I/O error while reading file." << std::endl;
-        return (EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
     catch (const libconfig::ParseException &pex)
     {
         std::cerr << "Parse error at " << pex.getFile() << ":" << pex.getLine() << " - " << pex.getError() << std::endl;
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
     // get the nuclei of interest
@@ -101,7 +102,7 @@ int InputManager::ReadConfigFile(const std::string &filename)
     catch (const libconfig::SettingNotFoundException &nfex)
     {
         std::cerr << "Missing projection gate parameters" << std::endl;
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
     // Fitting gates
@@ -135,13 +136,13 @@ int InputManager::ReadConfigFile(const std::string &filename)
     catch (const libconfig::SettingNotFoundException &nfex)
     {
         std::cerr << "Missing fitting parameters" << std::endl;
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
-    return EXIT_SUCCESS;
+    return;
 }
 
-std::vector<int> InputManager::ProjectionGates()
+std::vector<int> Inputs::ProjectionGates()
 {
     std::vector<int> v;
     v.push_back(fGateLow);
@@ -150,7 +151,7 @@ std::vector<int> InputManager::ProjectionGates()
     return v;
 }
 
-std::vector<int> InputManager::ProjectionBgGates()
+std::vector<int> Inputs::ProjectionBgGates()
 {
     std::vector<int> v;
     v.push_back(fBgGateLow);

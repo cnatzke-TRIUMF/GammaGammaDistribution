@@ -1,16 +1,16 @@
 
-#ifndef INPUT_MANAGER_H
-#define INPUT_MANAGER_H
+#ifndef INPUT_H
+#define INPUT_H
 
 #include <string>
 #include <vector>
 
-class InputManager
+class Inputs
 {
 public:
-    InputManager();
-    ~InputManager();
-    int ReadConfigFile(const std::string &filename);
+    Inputs();
+    ~Inputs();
+    void ReadConfigFile(const std::string &filename);
     std::vector<int> ProjectionGates();
     std::vector<int> ProjectionBgGates();
 

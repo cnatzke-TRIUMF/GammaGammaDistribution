@@ -19,7 +19,7 @@
 #include "TGraphErrors.h"
 #include "TRWPeak.h"
 
-#include "InputManager.h"
+#include "Inputs.h"
 #include "GenerateDistribution.h"
 #include "HistogramManager.h"
 #include "FitManager.h"
@@ -27,26 +27,25 @@
 int main(int argc, char **argv)
 {
 
-	if (argc == 1)
-	{ // no inputs given
-		PrintUsage(argv);
-		return 0;
-	}
-	else if (argc > 2)
+	switch (argc)
 	{
-		std::cerr << "Too many arguments given: "
-				  << argc << " given, 1 required.\n"
-				  << std::endl;
+	case 2:
+		fHistFile = argv[1];
+		fConfigFile = "config.cfg";
+		break;
+	case 3:
+		fHistFile = argv[1];
+		fConfigFile = argv[2];
+		break;
+	default:
 		PrintUsage(argv);
 		return 0;
 	}
 
-	InputManager inputs;
-	std::string config_file = "config.cfg";
+	Inputs inputs;
 
 	// inputs.SetVerbose(1);
-	int read_inputs = inputs.ReadConfigFile(config_file);
-	std::cout << inputs.ProjectionGates().at(0) << std::endl;
+	inputs.ReadConfigFile(fConfigFile);
 
 	/*
 
