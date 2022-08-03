@@ -140,3 +140,21 @@ int InputManager::ReadConfigFile(const std::string &filename)
 
     return EXIT_SUCCESS;
 }
+
+std::vector<int> InputManager::ProjectionGates()
+{
+    std::vector<int> v;
+    v.push_back(fGateLow);
+    v.push_back(fGateHigh);
+
+    return v;
+}
+
+std::vector<int> InputManager::ProjectionBgGates()
+{
+    std::vector<int> v;
+    v.push_back(fBgGateLow);
+    v.push_back(fBgGateHigh);
+
+    return v;
+}

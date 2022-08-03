@@ -45,9 +45,8 @@ int main(int argc, char **argv)
 	std::string config_file = "config.cfg";
 
 	// inputs.SetVerbose(1);
-	std::cout << inputs.Element() << std::endl;
 	int read_inputs = inputs.ReadConfigFile(config_file);
-	std::cout << inputs.Element() << std::endl;
+	std::cout << inputs.ProjectionGates().at(0) << std::endl;
 
 	/*
 
