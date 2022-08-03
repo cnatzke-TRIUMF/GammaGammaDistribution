@@ -44,7 +44,10 @@ int main(int argc, char **argv)
 	InputManager inputs;
 	std::string config_file = "config.cfg";
 
+	// inputs.SetVerbose(1);
+	std::cout << inputs.Element() << std::endl;
 	int read_inputs = inputs.ReadConfigFile(config_file);
+	std::cout << inputs.Element() << std::endl;
 
 	/*
 

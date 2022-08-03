@@ -9,9 +9,14 @@
 /* -------------------------------------------
     Constructor
 ------------------------------------------- */
-InputManager::InputManager()
+InputManager::InputManager() : fVerbose(0)
 {
-    // fInputFileName = NULL;
+    int init_value = -1;
+    fElement = fIsotope = init_value;
+    fGateLow = fGateHigh = init_value;
+    fBgGateLow = fBgGateHigh = init_value;
+    fFitLow = fFitHigh = init_value;
+    fCentroid = init_value;
 }
 
 /* -------------------------------------------
@@ -26,6 +31,8 @@ InputManager::~InputManager()
 ------------------------------------------- */
 int InputManager::ReadConfigFile(const std::string &filename)
 {
+    fInputFileName = filename;
+
     libconfig::Config cfg;
     // read the config file and check for errors
     try
@@ -43,98 +50,92 @@ int InputManager::ReadConfigFile(const std::string &filename)
         return EXIT_FAILURE;
     }
 
-    // get the store name
+    // get the nuclei of interest
     try
     {
-        std::string name = cfg.lookup("name");
-        std::cout << "Store name: " << name << std::endl
-                  << std::endl;
+        fElement = cfg.lookup("element");
+        fIsotope = cfg.lookup("isotope");
+
+        if (fVerbose > 0)
+        {
+            std::cout << "Nuclei of interest: z=" << fElement << " a=" << fIsotope << std::endl;
+            std::cout << std::endl;
+        }
     }
     catch (const libconfig::SettingNotFoundException &nfex)
     {
-        std::cerr << "No 'name' setting in configuration file." << std::endl;
+        std::cerr << "No 'element' or 'isotope' setting in configuration file." << std::endl;
     }
 
-    const libconfig::Setting &root = cfg.getRoot();
-
-    // Output a list of all books in the inventory.
+    // Projection gates
     try
     {
-        const libconfig::Setting &books = root["inventory"]["books"];
-        int count = books.getLength();
-
-        std::cout << std::setw(30) << std::left << "TITLE"
-                  << "  "
-                  << std::setw(30) << std::left << "AUTHOR"
-                  << "   "
-                  << std::setw(6) << std::left << "PRICE"
-                  << "  "
-                  << "QTY"
-                  << std::endl;
-
-        for (int i = 0; i < count; ++i)
+        if (fVerbose > 0)
         {
-            const libconfig::Setting &book = books[i];
-
-            // Only output the record if all of the expected fields are present.
-            std::string title, author;
-            double price;
-            int qty;
-
-            if (!(book.lookupValue("title", title) && book.lookupValue("author", author) && book.lookupValue("price", price) && book.lookupValue("qty", qty)))
-                continue;
-
-            std::cout << std::setw(30) << std::left << title << "  "
-                      << std::setw(30) << std::left << author << "  "
-                      << '$' << std::setw(6) << std::right << price << "  "
-                      << qty
+            std::cout << "\tPROJECTION GATES" << std::endl;
+            std::cout << std::setw(20) << std::left << "GATE_LOW"
+                      << "  "
+                      << std::setw(20) << std::left << "GATE_HIGH"
+                      << "  "
+                      << std::setw(20) << std::left << "BG_GATE_HIGH"
+                      << "  "
+                      << std::setw(20) << std::left << "BG_GATE_HIGH"
+                      << "  "
                       << std::endl;
         }
-        std::cout << std::endl;
-    }
-    catch (const libconfig::SettingNotFoundException &nfex)
-    {
-        // Ignore.
+
+        if (cfg.lookupValue("projection_gates.gate_low", fGateLow) && cfg.lookupValue("projection_gates.gate_high", fGateHigh) && cfg.lookupValue("projection_gates.bg_gate_low", fBgGateLow) && cfg.lookupValue("projection_gates.bg_gate_high", fBgGateHigh))
+        {
+            if (fVerbose > 0)
+            {
+                std::cout << std::setw(20) << std::left << fGateLow << "  "
+                          << std::setw(20) << std::left << fGateHigh << "  "
+                          << std::setw(20) << std::left << fBgGateLow << "  "
+                          << std::setw(20) << std::left << fBgGateHigh << "  "
+                          << std::endl;
+                std::cout << std::endl;
+            }
+        }
     }
 
-    // Output a list of all books in the inventory.
+    catch (const libconfig::SettingNotFoundException &nfex)
+    {
+        std::cerr << "Missing projection gate parameters" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // Fitting gates
     try
     {
-        const libconfig::Setting &movies = root["inventory"]["movies"];
-        int count = movies.getLength();
-
-        std::cout << std::setw(30) << std::left << "TITLE"
-                  << "  "
-                  << std::setw(10) << std::left << "MEDIA"
-                  << "   "
-                  << std::setw(6) << std::left << "PRICE"
-                  << "  "
-                  << "QTY"
-                  << std::endl;
-
-        for (int i = 0; i < count; ++i)
+        if (fVerbose > 0)
         {
-            const libconfig::Setting &movie = movies[i];
-
-            // Only output the record if all of the expected fields are present.
-            std::string title, media;
-            double price;
-            int qty;
-
-            if (!(movie.lookupValue("title", title) && movie.lookupValue("media", media) && movie.lookupValue("price", price) && movie.lookupValue("qty", qty)))
-                continue;
-
-            std::cout << std::setw(30) << std::left << title << "  "
-                      << std::setw(10) << std::left << media << "  "
-                      << '$' << std::setw(6) << std::right << price << "  "
-                      << qty
+            std::cout << "\tFITTING GATES" << std::endl;
+            std::cout << std::setw(20) << std::left << "CENTROID"
+                      << "  "
+                      << std::setw(20) << std::left << "LOWER_BOUND"
+                      << "  "
+                      << std::setw(20) << std::left << "UPPER_BOUND"
+                      << "  "
                       << std::endl;
         }
-        std::cout << std::endl;
+
+        if (cfg.lookupValue("fitting_gates.centroid", fCentroid) && cfg.lookupValue("fitting_gates.fit_low", fFitLow) && cfg.lookupValue("fitting_gates.fit_high", fFitHigh))
+        {
+            if (fVerbose > 0)
+            {
+                std::cout << std::setw(20) << std::left << fCentroid << "  "
+                          << std::setw(20) << std::left << fFitLow << "  "
+                          << std::setw(20) << std::left << fFitHigh << "  "
+                          << std::endl;
+                std::cout << std::endl;
+            }
+        }
     }
+
     catch (const libconfig::SettingNotFoundException &nfex)
     {
-        // Ignore.
+        std::cerr << "Missing fitting parameters" << std::endl;
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
