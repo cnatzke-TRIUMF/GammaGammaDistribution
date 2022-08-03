@@ -3,12 +3,11 @@
 //
 // Author:        Connor Natzke (cnatzke@triumf.ca)
 // Creation Date: Tuesday May 12, 2020	T14:41:17-07:00
-// Last Update:   Tuesday May 12, 2020	T14:41:17-07:00
+// Last Update:   2022-08-03
 // Usage:
 //
 //////////////////////////////////////////////////////////////////////////////////
 #include <iostream>
-#include <fstream>
 #include "TFile.h"
 #include "TGRSIUtilities.h"
 #include "TParserLibrary.h" // needed for GetRunNumber
@@ -20,6 +19,7 @@
 #include "TGraphErrors.h"
 #include "TRWPeak.h"
 
+#include "InputManager.h"
 #include "GenerateDistribution.h"
 #include "HistogramManager.h"
 #include "FitManager.h"
@@ -41,6 +41,13 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
+	InputManager inputs;
+	std::string config_file = "config.cfg";
+
+	int read_inputs = inputs.ReadConfigFile(config_file);
+
+	/*
+
 	HistogramManager *hist_man = new HistogramManager();
 	FitManager fit_man;
 	int file_type = 0;
@@ -58,8 +65,8 @@ int main(int argc, char **argv)
 
 	if (file_type == 1)
 	{
-		time_random_hist_list = hist_man->LoadHistograms(argv[1], "TimeRandomSubtacted");
-		event_mixed_hist_list = hist_man->LoadHistograms(argv[1], "EventMixed");
+		time_random_hist_list = hist_man->LoadHistograms(argv[1], "time-random-subtracted");
+		event_mixed_hist_list = hist_man->LoadHistograms(argv[1], "event-mixed");
 	}
 	else
 	{
@@ -79,8 +86,9 @@ int main(int argc, char **argv)
 	event_mixed_clone_vec = fit_man.CloneProjections(event_mixed_projection_vec, fit_low, fit_high);
 
 	PlotDistribution(time_random_clone_vec, event_mixed_clone_vec, fit_low, fit_high);
+	*/
 
-	return 0;
+	return EXIT_SUCCESS;
 } // main
 
 /******************************************************************************
@@ -204,11 +212,11 @@ int AutoFileDetect(std::string fileName)
 	}
 } // End AutoFileDetect
 
-/************************************************************/ /**
-																* Opens Root files
-																*
-																* @param fileName  Name of ROOT file
-																***************************************************************/
+/**************************************************************
+ * Opens Root files
+ *
+ * @param fileName  Name of ROOT file
+ ***************************************************************/
 /*
    void OpenRootFile(std::string fileName){
    TFile* in_file = new TFile(fileName.c_str());
