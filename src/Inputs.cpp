@@ -34,22 +34,33 @@ Inputs::~Inputs()
 ------------------------------------------- */
 void Inputs::ReadInputFiles(const std::string &hist_file, const std::string &config_file)
 {
-    ReadConfigFile(config_file);
+    fConfigFileName = config_file;
+    ReadConfigFile();
     ReadInHistograms(hist_file);
+
+    for (auto const &iter : fHistogramVector)
+    {
+        std::cout << "Name: " << iter << std::endl;
+        std::cout << "Name: " << iter->GetName() << std::endl;
+    }
+
+    for (auto const &iter : fEventMixedHistogramVector)
+    {
+        std::cout << "Name: " << iter->GetName() << std::endl;
+    }
 }
 
 /* -------------------------------------------
     Reads in and parses config file
 ------------------------------------------- */
-void Inputs::ReadConfigFile(const std::string &filename)
+void Inputs::ReadConfigFile()
 {
-    fInputFileName = filename;
 
     libconfig::Config cfg;
     // read the config file and check for errors
     try
     {
-        cfg.readFile(filename.c_str());
+        cfg.readFile(fConfigFileName.c_str());
     }
     catch (const libconfig::FileIOException &fioex)
     {
@@ -200,7 +211,7 @@ void Inputs::ReadInHistograms(const std::string &filename)
 void Inputs::ExtractHistograms(TFile *file)
 {
     std::vector<std::string> dir_names = {"time-random-subtracted", "event-mixed"};
-    TH2D *obj;
+    TH2D *h;
     TKey *key;
 
     for (auto const &dir_iter : dir_names)
@@ -210,10 +221,19 @@ void Inputs::ExtractHistograms(TFile *file)
         TIter next(dir->GetListOfKeys());
         while ((key = (TKey *)next()))
         {
-            obj = dynamic_cast<TH2D *>(dir->Get(key->GetName())); // copy object to memory
-            fHistogramVector.push_back(obj);
+            h = static_cast<TH2D *>(dir->Get(key->GetName()));
+
+            if (dir_iter == dir_names.at(0))
+            {
+                fHistogramVector.push_back(h);
+            }
+            else if (dir_iter == dir_names.at(1))
+            {
+                fEventMixedHistogramVector.push_back(h);
+            }
+
             if (fVerbose > 0)
-                std::cout << " found object: " << key->GetName() << std::endl;
+                std::cout << " Found histogram: " << key->GetName() << std::endl;
         }
     }
 }

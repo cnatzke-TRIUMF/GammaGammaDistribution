@@ -13,7 +13,7 @@ public:
     Inputs();
     ~Inputs();
     void ReadInputFiles(const std::string &histo_file, const std::string &config_file);
-    void ReadConfigFile(const std::string &filename);
+    void ReadConfigFile();
     void ReadInHistograms(const std::string &filename);
     void ExtractHistograms(TFile *file);
     std::vector<int> ProjectionGates();
@@ -25,12 +25,13 @@ public:
     inline int Isotope() { return fIsotope; };
 
 private:
-    std::string fInputFileName;
+    std::string fConfigFileName;
     int fElement, fIsotope;
     int fGateLow, fGateHigh, fBgGateLow, fBgGateHigh;
     int fFitLow, fFitHigh, fCentroid;
     int fVerbose;
     std::vector<TH2D *> fHistogramVector;
+    std::vector<TH2D *> fEventMixedHistogramVector;
 };
 
 #endif
