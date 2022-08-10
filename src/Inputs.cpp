@@ -19,7 +19,8 @@ Inputs::Inputs() : fVerbose(0)
     fGateLow = fGateHigh = init_value;
     fBgGateLow = fBgGateHigh = init_value;
     fFitLow = fFitHigh = init_value;
-    fCentroid = init_value;
+    fGateCentroid = init_value;
+    fPeakCentroid = init_value;
 }
 
 /* -------------------------------------------
@@ -85,7 +86,9 @@ void Inputs::ReadConfigFile()
         if (fVerbose > 0)
         {
             std::cout << "---> PROJECTION GATES" << std::endl;
-            std::cout << std::setw(20) << std::left << "GATE_LOW"
+            std::cout << std::setw(20) << std::left << "GATE_CENTROID"
+                      << "  "
+                      << std::setw(20) << std::left << "GATE_LOW"
                       << "  "
                       << std::setw(20) << std::left << "GATE_HIGH"
                       << "  "
@@ -96,11 +99,12 @@ void Inputs::ReadConfigFile()
                       << std::endl;
         }
 
-        if (cfg.lookupValue("projection_gates.gate_low", fGateLow) && cfg.lookupValue("projection_gates.gate_high", fGateHigh) && cfg.lookupValue("projection_gates.bg_gate_low", fBgGateLow) && cfg.lookupValue("projection_gates.bg_gate_high", fBgGateHigh))
+        if (cfg.lookupValue("projection_gates.centroid", fGateCentroid) && cfg.lookupValue("projection_gates.gate_low", fGateLow) && cfg.lookupValue("projection_gates.gate_high", fGateHigh) && cfg.lookupValue("projection_gates.bg_gate_low", fBgGateLow) && cfg.lookupValue("projection_gates.bg_gate_high", fBgGateHigh))
         {
             if (fVerbose > 0)
             {
-                std::cout << std::setw(20) << std::left << fGateLow << "  "
+                std::cout << std::setw(20) << std::left << fGateCentroid << "  "
+                          << std::setw(20) << std::left << fGateLow << "  "
                           << std::setw(20) << std::left << fGateHigh << "  "
                           << std::setw(20) << std::left << fBgGateLow << "  "
                           << std::setw(20) << std::left << fBgGateHigh << "  "
@@ -131,11 +135,11 @@ void Inputs::ReadConfigFile()
                       << std::endl;
         }
 
-        if (cfg.lookupValue("fitting_gates.centroid", fCentroid) && cfg.lookupValue("fitting_gates.fit_low", fFitLow) && cfg.lookupValue("fitting_gates.fit_high", fFitHigh))
+        if (cfg.lookupValue("fitting_gates.centroid", fPeakCentroid) && cfg.lookupValue("fitting_gates.fit_low", fFitLow) && cfg.lookupValue("fitting_gates.fit_high", fFitHigh))
         {
             if (fVerbose > 0)
             {
-                std::cout << std::setw(20) << std::left << fCentroid << "  "
+                std::cout << std::setw(20) << std::left << fPeakCentroid << "  "
                           << std::setw(20) << std::left << fFitLow << "  "
                           << std::setw(20) << std::left << fFitHigh << "  "
                           << std::endl;
@@ -199,7 +203,8 @@ void Inputs::ReadInHistograms(const std::string &filename)
  *********************************************/
 void Inputs::ExtractHistograms(TFile *file)
 {
-    std::vector<std::string> dir_names = {"time-random-subtracted", "event-mixed"};
+    std::vector<std::string> dir_names = {"time-random-subtracted"};
+    // std::vector<std::string> dir_names = {"time-random-subtracted", "event-mixed"};
     TH2D *h;
     TKey *key;
 

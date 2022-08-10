@@ -12,13 +12,13 @@
 #include "TRWPeak.h"
 #include "TFile.h"
 
-#include "GatingAndFitting.h"
+#include "Fitting.h"
 #include "j_env.h"
 
 /*************************************************************
  * Constructor
  ***************************************************************/
-FitManager::FitManager()
+Fitting::Fitting(Inputs &inputs) : fInputs(inputs)
 {
 	TH1::SetDefaultSumw2(); // correctly propagate errors when summing histograms
 							// std::cout << "Fitting Manager intialized" << std::endl;
@@ -27,9 +27,42 @@ FitManager::FitManager()
 /**************************************************************
  * Destructor
  ***************************************************************/
-FitManager::~FitManager()
+Fitting::~Fitting()
 {
 	// std::cout << "Fitting Manager deleted" << std::endl;
+}
+
+/**************************************************************
+ * Gates and fits projections
+ *
+ * @param histList List of 2D gamma gamma matrices
+ ***************************************************************/
+void Fitting::GateAndFit()
+{
+	fProjectedHistograms.clear();
+	fBGHistograms.clear();
+	fBGSubtractedHistograms.clear();
+
+	for (auto const &iter : fInputs.GetPromptHistograms())
+	{
+		GateAndProject(iter);
+	}
+
+	TFile out("out.root", "RECREATE");
+	out.cd();
+	for (auto const &h : fProjectedHistograms)
+	{
+		h->Write();
+	}
+	for (auto const &h : fBGHistograms)
+	{
+		h->Write();
+	}
+	for (auto const &h : fBGSubtractedHistograms)
+	{
+		h->Write();
+	}
+	out.Close();
 }
 
 /**************************************************************
@@ -41,7 +74,7 @@ FitManager::~FitManager()
  * @param low_fit Low value of fit range
  * @param high_fit High value of fit range
  ***************************************************************/
-std::vector<TH1D *> FitManager::GenerateProjections(TList *histList, float low_proj, float high_proj, float low_fit, float high_fit)
+std::vector<TH1D *> Fitting::GenerateProjections(TList *histList, float low_proj, float high_proj, float low_fit, float high_fit)
 {
 
 	int verbose = 1;
@@ -84,7 +117,7 @@ std::vector<TH1D *> FitManager::GenerateProjections(TList *histList, float low_p
  *
  * @param histList Vector of histograms to be cloned
  ***************************************************************/
-std::vector<TH1D *> FitManager::CloneProjections(std::vector<TH1D *> histVec, float lowFit, float highFit)
+std::vector<TH1D *> Fitting::CloneProjections(std::vector<TH1D *> histVec, float lowFit, float highFit)
 {
 
 	int verbose = 1;
@@ -129,7 +162,7 @@ std::vector<TH1D *> FitManager::CloneProjections(std::vector<TH1D *> histVec, fl
  *
  * @param
  ***************************************************************/
-TRWPeak *FitManager::FitPeak(TH1D *inputHist, float peakPos, float lowFit, float highFit)
+TRWPeak *Fitting::FitPeak(TH1D *inputHist, float peakPos, float lowFit, float highFit)
 {
 	int verbose = 0;
 
@@ -169,6 +202,62 @@ TRWPeak *FitManager::FitPeak(TH1D *inputHist, float peakPos, float lowFit, float
 
 } // FitPeak
 
+/************************************************************
+ * Creates projection of 2D histogram
+ *
+ * @param
+ ***************************************************************/
+void Fitting::GateAndProject(TH2 *hist)
+{
+	int gate_low = fInputs.GateLow();
+	int gate_high = fInputs.GateHigh();
+	int iterations = 25;
+	double sigma = 1.5; // * Maybe fit original peak for sigma?
+	Option_t *spec_options = "";
+
+	std::cout << "Fitting histogram: " << hist->GetName() << std::endl;
+
+	// 0 == x
+	// true means no overflow/underflow bin
+	TH1 *proj_raw = hist_proj(hist, 0, Form("proj_%s", hist->GetName()), true);
+	TH1 *proj_sub = static_cast<TH1 *>(proj_raw->Clone("proj_sub"));
+	TH1 *spec_background = TSpectrum::StaticBackground(proj_raw, iterations, spec_options);
+
+	proj_sub->Add(spec_background, -1);
+
+	TAxis *ax = proj_raw->GetXaxis();
+	int bins = proj_raw->GetNbinsX();
+
+	if (gate_low > gate_high)
+	{
+		std::cerr << "Gate values may be reversed, please check config file" << std::endl;
+		int temp = gate_low;
+		gate_low = gate_high;
+		gate_high = temp;
+	}
+
+	// Finding bin value for gates
+	int gate_bin_low = ax->FindBin(gate_low);
+	int gate_bin_high = ax->FindBin(gate_high);
+	int bg_start = ax->FindBin(fInputs.GateCentroid() + sigma * 3);
+
+	double bincout_gate = proj_raw->Integral(gate_bin_low, gate_bin_high);
+	double bincount_bg = spec_background->Integral(gate_bin_low, gate_bin_high);
+	double backfrac = bincount_bg / bincout_gate;
+
+	TH1 *gate_hist = hist_gater_bin(gate_bin_low, gate_bin_high, hist, 0, Form("gate_hist_%s", hist->GetName()));
+
+	TH1 *compton_hist = hist_gater_bin(bg_start, hist, 0, Form("c_gate_%s", hist->GetName()));
+	TH1 *output_hist = scaled_back_subtract(gate_hist, compton_hist, backfrac, 0.04);
+
+	fProjectedHistograms.push_back(proj_raw);
+	fBGHistograms.push_back(compton_hist);
+	fBGSubtractedHistograms.push_back(output_hist);
+}
+
+/************************************************************
+ * Reference
+ ***************************************************************/
 std::vector<TH1 *> auto_gate(TH2 *raw_input, int xyz = 0, int itr = 25, Option_t *specopt = "", double sigma = 1.5, double thresh = 0.05, double Rd = 1, double Ru = -1)
 {
 	std::vector<TH1 *> ret;

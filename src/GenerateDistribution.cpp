@@ -23,7 +23,7 @@
 #include "Inputs.h"
 #include "GenerateDistribution.h"
 #include "HistogramManager.h"
-#include "GatingAndFitting.h"
+#include "Fitting.h"
 
 int main(int argc, char **argv)
 {
@@ -43,12 +43,14 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	Inputs inputs;
-
 	InitializeGRSIEnv();
 
+	Inputs inputs;
 	// inputs.SetVerbose(1);
 	inputs.ReadInputFiles(fHistFile, fConfigFile);
+
+	Fitting fits(inputs);
+	fits.GateAndFit();
 
 	// Old code here
 	/*
@@ -100,9 +102,10 @@ int main(int argc, char **argv)
  *
  * @param fileName  Name of input file
  *****************************************************************************/
+/*
 int PlotDistribution(std::vector<TH1D *> correlatedHists, std::vector<TH1D *> eventMixedHists, float fitLow, float fitHigh)
 {
-	FitManager fit_man;
+	Fitting fit_man;
 	double chi2;
 	double chi2_uncorr;
 	TRWPeak *fitted_peak;
@@ -193,6 +196,7 @@ int PlotDistribution(std::vector<TH1D *> correlatedHists, std::vector<TH1D *> ev
 	return 1;
 
 } // PlotDistribution
+*/
 
 /******************************************************************************
  * Detects type of input file
