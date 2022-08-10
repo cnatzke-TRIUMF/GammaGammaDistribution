@@ -7,6 +7,7 @@
 int PlotDistribution(std::vector<TH1D *> corrHists, std::vector<TH1D *> uncorrHists, float fitLow, float fitHigh);
 int AutoFileDetect(std::string fileName);
 void InitializeGRSIEnv();
+void InitializeJRootEnv();
 void PrintUsage(char *argv[]);
 
 std::string fHistFile, fConfigFile;

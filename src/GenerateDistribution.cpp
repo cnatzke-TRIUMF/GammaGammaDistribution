@@ -18,11 +18,12 @@
 #include "TCanvas.h"
 #include "TGraphErrors.h"
 #include "TRWPeak.h"
+#include "j_env.h"
 
 #include "Inputs.h"
 #include "GenerateDistribution.h"
 #include "HistogramManager.h"
-#include "FitManager.h"
+#include "GatingAndFitting.h"
 
 int main(int argc, char **argv)
 {
@@ -49,6 +50,7 @@ int main(int argc, char **argv)
 	// inputs.SetVerbose(1);
 	inputs.ReadInputFiles(fHistFile, fConfigFile);
 
+	// Old code here
 	/*
 
 	HistogramManager *hist_man = new HistogramManager();
@@ -213,38 +215,6 @@ int AutoFileDetect(std::string fileName)
 		return 0;
 	}
 } // End AutoFileDetect
-
-/**************************************************************
- * Opens Root files
- *
- * @param fileName  Name of ROOT file
- ***************************************************************/
-/*
-   void OpenRootFile(std::string fileName){
-   TFile* in_file = new TFile(fileName.c_str());
-   if (in_file->IsOpen()) {
-	   std::cout << "Opened ROOT file: " << in_file->GetName() << std::endl;
-	   HistogramManager* hist_man = new HistogramManager();
-	   TList *trsub_hist_list = hist_man->LoadHistograms(in_file, "TimeRandomSubtacted");
-
-	   TH2D* test_hist = (TH2D*)trsub_hist_list->FindObject("gammaGammaSub30");
-	   TCanvas *c1 = new TCanvas("c1","c1",800,650);
-	   c1->cd();
-	   test_hist->Draw("colz");
-	   c1->SetLogz();
-	   c1->Update();
-	   c1->Print("test.png");
-	   //std::cout << "Press any key to continue ..." << std::endl;
-	   //std::cin.get();
-
-	   // cleaning up
-	   delete trsub_hist_list;
-	   delete hist_man;
-   } else {
-	   std::cerr << "Could not open ROOT file: " << in_file->GetName() << std::endl;
-   }
-   } // end OpenRootFile
- */
 
 /******************************************************************************
  * Initializes GRSISort environment

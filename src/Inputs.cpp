@@ -37,17 +37,6 @@ void Inputs::ReadInputFiles(const std::string &hist_file, const std::string &con
     fConfigFileName = config_file;
     ReadConfigFile();
     ReadInHistograms(hist_file);
-
-    for (auto const &iter : fHistogramVector)
-    {
-        std::cout << "Name: " << iter << std::endl;
-        std::cout << "Name: " << iter->GetName() << std::endl;
-    }
-
-    for (auto const &iter : fEventMixedHistogramVector)
-    {
-        std::cout << "Name: " << iter->GetName() << std::endl;
-    }
 }
 
 /* -------------------------------------------
