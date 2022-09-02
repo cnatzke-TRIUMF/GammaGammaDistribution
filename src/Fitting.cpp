@@ -40,21 +40,27 @@ Fitting::~Fitting()
 void Fitting::GateAndFit()
 {
 	fProjectedHistograms.clear();
-	fBGHistograms.clear();
+	fComptonHistograms.clear();
 	fBGSubtractedHistograms.clear();
 
 	for (auto const &iter : fInputs.GetPromptHistograms())
 	{
 		GateAndProject(iter);
+		std::cout << iter->GetName() << std::endl;
 	}
 
 	TFile out("out.root", "RECREATE");
+	std::cout << "Writing histograms to file:" << out.GetName() << std::endl;
 	out.cd();
 	for (auto const &h : fProjectedHistograms)
 	{
 		h->Write();
 	}
-	for (auto const &h : fBGHistograms)
+	for (auto const &h : fGateHistograms)
+	{
+		h->Write();
+	}
+	for (auto const &h : fComptonHistograms)
 	{
 		h->Write();
 	}
@@ -64,6 +70,83 @@ void Fitting::GateAndFit()
 	}
 	out.Close();
 }
+
+/************************************************************
+ * Creates projection of 2D histogram
+ *
+ * @param matrix gamma-gamma matrix
+ ***************************************************************/
+void Fitting::GateAndProject(TH2 *matrix)
+{
+	int gate_low = fInputs.GateLow();
+	int gate_high = fInputs.GateHigh();
+	int background_stat_uncertainty = 0.04; // from James's code
+	// TH1 *output_hist = new TH1();
+
+	fFitFunction = new TF1("quick_gaus_main", "gaus(0) + pol2(3)", 0, 0);
+	fFitFunction->SetLineColor(1);
+
+	TH1 *full_proj = hist_proj(matrix, 0, Form("%s_gate", matrix->GetName()), true);
+	fProjectedHistograms.push_back(full_proj);
+
+	TH1 *gate_hist = hist_gater_bin(gate_low - 1, gate_high, matrix, 0, Form("%s_coin", matrix->GetName()));
+	gate_hist->SetLineColor(1);
+	gate_hist->GetXaxis()->SetTitleOffset(1.0);
+	fBGSubtractedHistograms.push_back(gate_hist);
+
+	// Compton bg subtraction
+	int compton_offset = gate_high + 2;
+
+	TH1 *compton_hist = hist_gater_bin(compton_offset, matrix, 0, Form("%s_compton", matrix->GetName()));
+	fComptonHistograms.push_back(compton_hist);
+
+	GetBackgroundFraction(full_proj);
+	std::cout << matrix->GetName() << " | " << fBackgroundSubtractionFactor << std::endl;
+	/*
+	   scaled_back_subtract(gate_hist, compton_hist, fBackgroundSubtractionFactor, output_hist, background_stat_uncertainty);
+
+	   output_hist->SetTitle("");
+   */
+}
+
+/************************************************************
+ * Finds background subtraction factor
+ *
+ * @param hist projection along axis of gamma-gamma matrix
+ ***************************************************************/
+void Fitting::GetBackgroundFraction(TH1 *hist)
+{
+	double gate_count = hist->Integral(fInputs.GateLow(), fInputs.GateHigh(), "width");
+	double background_count = gate_count;
+
+	if (gate_count <= 0)
+	{
+		fBackgroundSubtractionFactor = 0;
+		return;
+	}
+
+	TF1 *temp = QuickSingleGausAutoFit(hist, fInputs.GateCentroid(), fInputs.BgGateLow(), fInputs.BgGateHigh());
+	fFitFunction->SetParameters(temp->GetParameters());
+	fFitFunction->SetRange(temp->GetXmin(), temp->GetXmax());
+	delete temp;
+
+	// calculate background fraction from bg fit
+	double x0, x1, m, c, d;
+	x0 = hist->GetBinLowEdge(fInputs.GateLow());
+	x1 = hist->GetBinLowEdge(fInputs.GateHigh() + 1);
+	m = fFitFunction->GetParameter(4);
+	c = fFitFunction->GetParameter(3);
+	d = fFitFunction->GetParameter(5);
+
+	background_count = 0.3333 * d * std::pow(x1, 3) + 0.5 * m * std::pow(x1, 2) + c * x1 - (0.3333 * d * std::pow(x0, 3) + 0.5 * m * std::pow(x0, 2) + c * x0);
+
+	fBackgroundSubtractionFactor = background_count / gate_count;
+	if (!fBackgroundSubtractionFactor)
+		fBackgroundSubtractionFactor = 1;
+	if (!(fBackgroundSubtractionFactor <= 1 && fBackgroundSubtractionFactor >= 0))
+		fBackgroundSubtractionFactor = 0; // INF guard
+
+} // GetBackgroundFraction
 
 /**************************************************************
  * Fits gamma single peaks
@@ -201,113 +284,3 @@ TRWPeak *Fitting::FitPeak(TH1D *inputHist, float peakPos, float lowFit, float hi
 	return peak;
 
 } // FitPeak
-
-/************************************************************
- * Creates projection of 2D histogram
- *
- * @param
- ***************************************************************/
-void Fitting::GateAndProject(TH2 *hist)
-{
-	int gate_low = fInputs.GateLow();
-	int gate_high = fInputs.GateHigh();
-	int iterations = 25;
-	double sigma = 1.5; // * Maybe fit original peak for sigma?
-	Option_t *spec_options = "";
-
-	std::cout << "Fitting histogram: " << hist->GetName() << std::endl;
-
-	// 0 == x
-	// true means no overflow/underflow bin
-	TH1 *proj_raw = hist_proj(hist, 0, Form("proj_%s", hist->GetName()), true);
-	TH1 *proj_sub = static_cast<TH1 *>(proj_raw->Clone("proj_sub"));
-	TH1 *spec_background = TSpectrum::StaticBackground(proj_raw, iterations, spec_options);
-
-	proj_sub->Add(spec_background, -1);
-
-	TAxis *ax = proj_raw->GetXaxis();
-	int bins = proj_raw->GetNbinsX();
-
-	if (gate_low > gate_high)
-	{
-		std::cerr << "Gate values may be reversed, please check config file" << std::endl;
-		int temp = gate_low;
-		gate_low = gate_high;
-		gate_high = temp;
-	}
-
-	// Finding bin value for gates
-	int gate_bin_low = ax->FindBin(gate_low);
-	int gate_bin_high = ax->FindBin(gate_high);
-	int bg_start = ax->FindBin(fInputs.GateCentroid() + sigma * 3);
-
-	double bincout_gate = proj_raw->Integral(gate_bin_low, gate_bin_high);
-	double bincount_bg = spec_background->Integral(gate_bin_low, gate_bin_high);
-	double backfrac = bincount_bg / bincout_gate;
-
-	TH1 *gate_hist = hist_gater_bin(gate_bin_low, gate_bin_high, hist, 0, Form("gate_hist_%s", hist->GetName()));
-
-	TH1 *compton_hist = hist_gater_bin(bg_start, hist, 0, Form("c_gate_%s", hist->GetName()));
-	TH1 *output_hist = scaled_back_subtract(gate_hist, compton_hist, backfrac, 0.04);
-
-	fProjectedHistograms.push_back(proj_raw);
-	fBGHistograms.push_back(compton_hist);
-	fBGSubtractedHistograms.push_back(output_hist);
-}
-
-/************************************************************
- * Reference
- ***************************************************************/
-std::vector<TH1 *> auto_gate(TH2 *raw_input, int xyz = 0, int itr = 25, Option_t *specopt = "", double sigma = 1.5, double thresh = 0.05, double Rd = 1, double Ru = -1)
-{
-	std::vector<TH1 *> ret;
-
-	TH1 *proj = hist_proj(raw_input, xyz, "projraw", true);
-	TH1 *projsub = (TH1 *)proj->Clone("projsub");
-	TH1 *specback = TSpectrum::StaticBackground(proj, itr, specopt);
-	projsub->Add(specback, -1);
-
-	TAxis *ax = proj->GetXaxis();
-	int Nb = proj->GetNbinsX();
-	//     double w=ax->GetBinWidth(1);
-
-	TSpectrum *s = new TSpectrum(200);
-	Int_t nfound = s->Search(projsub, sigma, "", thresh);
-	Double_t *xpeaks;
-	xpeaks = s->GetPositionX();
-
-	if (Rd > Ru)
-	{
-		Rd = ax->GetBinLowEdge(1);
-		Ru = ax->GetBinLowEdge(Nb + 1);
-	}
-
-	for (int p = 0; p < nfound; p++)
-	{
-		Double_t xp = xpeaks[p];
-		if (xp < Rd || xp > Ru)
-			continue;
-
-		int b1 = ax->FindBin(xp - sigma * 2);
-		int b2 = ax->FindBin(xp + sigma * 2);
-		int b3 = ax->FindBin(xp + sigma * 3);
-
-		double ingatecount = proj->Integral(b1, b2);
-		double background = specback->Integral(b1, b2);
-		double backfrack = background / ingatecount;
-
-		TH1 *gate_hist = hist_gater_bin(b1, b2, raw_input, xyz, "gate_hist");
-
-		TH1 *compton_hist = hist_gater_bin(b3, raw_input, xyz, "c_gate");
-		TH1 *output_hist = scaled_back_subtract(gate_hist, compton_hist, backfrack, 0.04);
-		delete compton_hist;
-		delete gate_hist;
-
-		stringstream ss;
-		ss << "GateOn" << xp;
-		output_hist->SetName(ss.str().c_str());
-		ret.push_back(output_hist);
-	}
-
-	return ret;
-}

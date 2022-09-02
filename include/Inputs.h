@@ -28,6 +28,8 @@ public:
     inline int GateLow() { return fGateLow; };
     inline int GateHigh() { return fGateHigh; };
     inline double GateCentroid() { return fGateCentroid; };
+    inline int BgGateLow() { return fBgGateLow; };
+    inline int BgGateHigh() { return fBgGateHigh; };
 
 private:
     std::string fConfigFileName;
